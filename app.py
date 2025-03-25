@@ -19,14 +19,23 @@ aai.settings.api_key = assemblyai_api_key
 # Configure the API client with your API key
 genai.configure(api_key=google_api_key)
 
-
+# ✅ Display Logo
 def display_logos():
-    st.image("ipams_logo(1).png", width=60) 
+    st.image("ipams_logo.png", width=60) 
 display_logos()
 
+# ✅ Generate AI Questions from Resume
 def generate_summary_prompt(comments):
     comments_text = " ".join(map(str, comments))
-    prompt = f"...Ask first question as Introduce about yourself, next Generate 5 Technical questions based on this resume(projects, skills) for the candidate from the given resume.........ask 2 questions on SQL.....ask 2 question on DBMS......Ask Total 10 questions. I DONT WANT HEADINGS..GIVE STRAIGHT 1..... QUESTIONS LINE BY LINE.:\n\n{comments_text}"
+    prompt = f"""
+    Ask the first question as: **Introduce yourself**
+    Then, generate **5 Technical Questions** based on this resume (projects, skills)
+    - Ask **2 SQL Questions**
+    - Ask **2 DBMS Questions**
+    - Total **10 questions**
+    Provide only questions, no headings.
+    {comments_text}
+    """
     return prompt
 
 def generate_text(prompt):
@@ -34,11 +43,23 @@ def generate_text(prompt):
     response = model.generate_content(prompt)
     return response.text
 
+# ✅ Extract Text from Resume (PDF)
 def extract_text_from_pdf(pdf_file):
     reader = PdfReader(pdf_file)
-    text = [page.extract_text() for page in reader.pages]
+    text = [page.extract_text() for page in reader.pages if page.extract_text()]
     return text
 
+# ✅ Transcribe Video Answer
+def transcribe_video(video_path):
+    """Transcribes video using AssemblyAI"""
+    transcriber = aai.Transcriber()
+    try:
+        transcript = transcriber.transcribe(video_path)
+        return transcript.text
+    except Exception as e:
+        return f"Error in transcription: {str(e)}"
+
+# ✅ Generate Interview Analysis Report (PDF)
 def generate_pdf(analysis_report):
     pdf = FPDF()
     pdf.add_page()
@@ -50,8 +71,9 @@ def generate_pdf(analysis_report):
     pdf.output(pdf_output_path)
     return pdf_output_path
 
+# ✅ Send Email with PDF Attachment
 def send_email(to_email, pdf_path):
-    from_email = "ipams2.ohr@gmail.com"
+    from_email = "your_email@gmail.com"
     subject = "Interview Analysis Report"
     body = "Please find the attached Interview Analysis Report."
 
@@ -68,12 +90,13 @@ def send_email(to_email, pdf_path):
 
     with smtplib.SMTP('smtp.gmail.com', 587) as server:
         server.starttls()
-        server.login(from_email, 'boyparupktudwtci')  # Use environment variable for actual password
+        server.login(from_email, EMAIL_PASSWORD)
         server.sendmail(from_email, to_email, msg.as_string())
 
-# Streamlit app
-st.title("IPAMS 2.O")
+# ✅ Streamlit App UI
+st.title("🎯 IPAMS 2.O - AI Interview Guide")
 
+# 🔹 **Candidate Info Form**
 if 'name' not in st.session_state or 'email' not in st.session_state:
     st.header("Candidate Information")
     name = st.text_input("Enter your name")
@@ -86,10 +109,13 @@ if 'name' not in st.session_state or 'email' not in st.session_state:
             st.write(f"Hi {name}, please upload your resume.")
         else:
             st.error("Please enter both name and email.")
+
+# 🔹 **Resume Upload**
 else:
     st.write(f"Hi {st.session_state.name}, please upload your resume.")
     pdf_file = st.file_uploader("Upload PDF", type=["pdf"])
 
+    # ✅ Extract and Generate Questions
     if pdf_file and 'questions' not in st.session_state:
         with st.spinner("Extracting text from PDF..."):
             comments = extract_text_from_pdf(pdf_file)
@@ -101,14 +127,16 @@ else:
             st.session_state.questions = [{"question": q, "answer": "", "transcribed": False} for q in questions if q.strip()]
             st.session_state.current_question_index = 0
 
+    # ✅ Display Questions One by One
     if 'questions' in st.session_state:
-        st.subheader("Generated Questions")
+        st.subheader("📝 Generated Questions")
 
         current_index = st.session_state.current_question_index
         question_data = st.session_state.questions[current_index]
         question = question_data["question"]
         st.write(f"{current_index + 1}. {question}")
 
+        # 🎥 **Record & Upload Video Answer**
         components.html(f"""
             <div>
                 <video id="video_{current_index}" width="320" height="240" controls></video>
@@ -143,7 +171,6 @@ else:
                             a.download = 'video_{current_index}.mp4';
                             document.body.appendChild(a);
                             a.click();
-                            setTimeout(() => URL.revokeObjectURL(url), 100);
                         }};
                     }};
 
@@ -155,6 +182,7 @@ else:
             </div>
         """, height=400)
 
+        # 🔹 **Upload Video for Transcription**
         video_file = st.file_uploader(f"Upload video answer for Question {current_index + 1}", type=["mp4"], key=f"uploader_{current_index}")
 
         if video_file and not question_data["transcribed"]:
@@ -167,18 +195,9 @@ else:
                 st.session_state.questions[current_index]["transcribed"] = True
                 st.write(f"Transcription: {transcript}")
 
+        # 🔹 **Navigation Buttons**
         if st.button("Next Question") and current_index < len(st.session_state.questions) - 1:
             st.session_state.current_question_index += 1
         elif st.session_state.current_question_index == len(st.session_state.questions) - 1:
             st.success("All questions answered. Preparing analysis...")
 
-            if st.button("Submit Answers"):
-                with st.spinner("Analyzing answers..."):
-                    answers = [q["answer"] for q in st.session_state.questions]
-                    analysis_report = analyze_answers_with_ai(answers)
-                
-                st.subheader("Summary Report")
-                pdf_path = generate_pdf(analysis_report)
-                st.success(f"PDF report generated: {pdf_path}")
-                send_email(st.session_state.email, pdf_path)
-                st.write("The report has been sent to your email.")
