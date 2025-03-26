@@ -94,7 +94,7 @@ def send_email(to_email, pdf_path):
         server.sendmail(from_email, to_email, msg.as_string())
 
 # ✅ Streamlit App UI
-st.title(" Smart Interview  Guide")
+st.title(" Smart Interview mock  Guide")
 
 # 🔹 **Candidate Info Form**
 if 'name' not in st.session_state or 'email' not in st.session_state:
