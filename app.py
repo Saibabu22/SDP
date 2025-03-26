@@ -21,7 +21,7 @@ genai.configure(api_key=google_api_key)
 
 # ✅ Display Logo
 def display_logos():
-    st.image("iplogo.png", width=60) 
+    st.image("iplogo.png", width=90) 
 display_logos()
 
 # ✅ Generate AI Questions from Resume
@@ -94,7 +94,7 @@ def send_email(to_email, pdf_path):
         server.sendmail(from_email, to_email, msg.as_string())
 
 # ✅ Streamlit App UI
-st.title("🎯 IPAMS 2.O - AI Interview Guide")
+st.title(" Smart Interview  Guide")
 
 # 🔹 **Candidate Info Form**
 if 'name' not in st.session_state or 'email' not in st.session_state:
