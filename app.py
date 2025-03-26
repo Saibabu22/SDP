@@ -21,7 +21,7 @@ genai.configure(api_key=google_api_key)
 
 # ✅ Display Logo
 def display_logos():
-    st.image("ipams_logo(1).png", width=60) 
+    st.image("iplogo.png", width=60) 
 display_logos()
 
 # ✅ Generate AI Questions from Resume
